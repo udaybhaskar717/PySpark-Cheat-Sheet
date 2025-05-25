@@ -12,8 +12,15 @@ Use this living document to record each PySpark function you learn. For every en
 
 | Function                 | Purpose               | Syntax                                               | Example                                                            |
 |--------------------------|-----------------------|------------------------------------------------------|--------------------------------------------------------------------|
-| `SparkSession.builder`   | Initialize SparkSession | `SparkSession.builder.appName(name).getOrCreate()`   | `spark = SparkSession.builder.appName("app").getOrCreate()`        |
+| `SparkSession.builder`   | Initialize SparkSession | `SparkSession.builder.appName(name).getOrCreate()`   | `spark = SparkSession.builder.appName("app").getOrCreate()`      |
 |                          |                       |                                                      |                                                                    |
+
+**What is Spark**
+
+Think of spark like a restaurant kitchen:
+1. You (the chef) write down a recipe (your DataFrame code):
+  'Take the raw ingredients (Data), remove the bad bits (filters), then plate only the fields I care about (selected columns)'
+2. Sprk doesn't immediately start cooking, insted, it writes you a *step-by-step plan* in the back kitchen (the "query plan"), figures out which tasks can be done in parallel, and only then sends the orders to the cooks (executors) 
 
 ---
 
