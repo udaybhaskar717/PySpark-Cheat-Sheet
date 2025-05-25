@@ -14,6 +14,7 @@ Use this living document to record each PySpark function you learn. For every en
 |--------------------------|-----------------------|------------------------------------------------------|--------------------------------------------------------------------|
 | `SparkSession.builder`   | Initialize SparkSession | `SparkSession.builder.appName(name).getOrCreate()`   | `spark = SparkSession.builder.appName("app").getOrCreate()`      |
 | `df.explain([mode])`      | Show Spark's query plan (Logical and physical)| `df.explain()`,`df.explain("formatted")`| Prints Parsed/Analyzed/Optimized logical plans and the Physical plan. Use it to spot expensive shuffles (`Exchange`) or confirm broadcast joins (`BroadcastExchange`) for performance tuning. |
+| `df.cache(()` | To the intermediate results in RAM, it avoid re computations | 
 
 
 
@@ -38,6 +39,62 @@ how to use df.explain
   * Wrap in AQE? you may see 'AdaptiveSparkPlan' at the top
 ---
 
+
+| **Plan**     | After caching, a second call will show an `InMemoryTableScan` instead of repeating scans and filters. |
+
+---
+
+## 3. `df.persist([storageLevel])`
+
+| Aspect       | Details                                                                          |
+|--------------|----------------------------------------------------------------------------------|
+| **What**     | Like `.cache()`, but you choose **where** to store the data (memory, disk, etc.)|
+| **Options**  | Common `StorageLevel` values:<br/>• `MEMORY_ONLY` (default)<br/>• `MEMORY_AND_DISK`<br/>• `DISK_ONLY`<br/>• `MEMORY_ONLY_SER` (serialized)<br/>• plus replication variants   |
+| **Why**      | - Data too big for RAM?<br/>- Want spill-to-disk if memory fills?<br/>- Need persistence across node failures? |
+| **Example**  | ```python
+from pyspark import StorageLevel
+
+# Persist in memory, spill to disk when needed
+df2 = df.filter("Quantity > 0").withColumn("Total", ...)
+df2_persisted = df2.persist(StorageLevel.MEMORY_AND_DISK)
+
+# Materialize
+  df2_persisted.count()
+  | **Plan**     | Similar to `cache()`, subsequent operations read from an **in-memory or on-disk** table scan. |
+  
+  
+  ## 4. `df.unpersist([blocking])`
+  
+  | Aspect       | Details                                                                          |
+  |--------------|----------------------------------------------------------------------------------|
+  | **What**     | Tells Spark “I’m done with this cached/persisted DataFrame—free the storage.”   |
+  | **blocking** | - `True` (default): wait until data is actually removed before moving on.<br/>- `False`: uncache request is asynchronous. |
+  | **Why**      | - Free up RAM/disk for other jobs.<br/>- Clean up long-running applications. |
+  | **Example**  | ```python
+  # After you finish all operations on df2_cached:
+  df2_cached.unpersist(blocking=True)
+
+  | **Plan**     | Later `explain()` calls will no longer show an `InMemoryTableScan` for that DataFrame. |
+    
+  ### 🔑 Key Takeaways
+  
+    1. **When to cache/persist:**  
+       - You use the **same** DataFrame in multiple actions (e.g., counts, writes, joins).  
+       - You have an **expensive** pipeline you don’t want re-running.  
+    
+    2. **Choosing storage level:**  
+       - Start with `cache()` (memory only).  
+       - If you run out of RAM, switch to `persist(MEMORY_AND_DISK)`.  
+    
+    3. **Always unpersist:**  
+       - In long workflows or notebooks, call `.unpersist()` when you no longer need the cached data.  
+    
+    4. **Verify with `explain()`:**  
+       - After caching, rerun `df.explain("formatted")` on a **cached** DataFrame and look for `InMemoryTableScan`—that confirms Spark is reading from cache.  
+  
+  By fitting these into your day-to-day code and watching how your execution plans change, you’ll quickly gain muscle-memory on when and how to cache for maximum speed.
+
+```
 ## 2. Reading & Writing
 
 | Function                 | Purpose               | Syntax                                               | Example                                                            |
