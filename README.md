@@ -13,7 +13,10 @@ Use this living document to record each PySpark function you learn. For every en
 | Function                 | Purpose               | Syntax                                               | Example                                                            |
 |--------------------------|-----------------------|------------------------------------------------------|--------------------------------------------------------------------|
 | `SparkSession.builder`   | Initialize SparkSession | `SparkSession.builder.appName(name).getOrCreate()`   | `spark = SparkSession.builder.appName("app").getOrCreate()`      |
-|                          |                       |                                                      |                                                                    |
+| 'df.explain([mode])      | Show Spark's query plan (Logical and physical)| 'df.explain()','df.explain("formatted")'| Prints Parsed/Analyzed/Optimized logical plans and the Physical plan. Use it to spot expensive shuffles (`Exchange`) or confirm broadcast joins (`BroadcastExchange`) for performance tuning. |
+
+
+
 
 **What is Spark**
 
@@ -22,6 +25,17 @@ Think of spark like a restaurant kitchen:
   'Take the raw ingredients (Data), remove the bad bits (filters), then plate only the fields I care about (selected columns)'
 2. Sprk doesn't immediately start cooking, insted, it writes you a *step-by-step plan* in the back kitchen (the "query plan"), figures out which tasks can be done in parallel, and only then sends the orders to the cooks (executors) 
 
+how to use df.explain
+
+* Purpose: Reveal exactly how spark will execute your DatFrame pipeline
+* syntax variant:
+   * df.explain() - physical plan only
+   * df.explain(True) - + parsed/optimized logial plans
+   * df.explain("formatted") - nicely indented physical plan
+**key notes**
+  * Look for 'Exchange hashpartitioning' -> constly shuffle
+  * Lokk for 'BroadcastExchange' -> good for small-table joins
+  * Wrap in AQE? you may see 'AdaptiveSparkPlan' at the top
 ---
 
 ## 2. Reading & Writing
